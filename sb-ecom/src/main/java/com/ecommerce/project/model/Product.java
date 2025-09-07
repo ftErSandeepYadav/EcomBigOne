@@ -36,4 +36,8 @@ public class Product {
     @JsonBackReference
     private Category category ;
 
+    @ManyToOne
+    @JoinColumn(name = "seller_id")
+    private User user ;
+
 }
