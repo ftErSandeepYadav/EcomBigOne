@@ -2,10 +2,14 @@ package com.ecommerce.project.service;
 
 import com.ecommerce.project.exception.APIException;
 import com.ecommerce.project.exception.ResourceNotFoundException;
+import com.ecommerce.project.model.Cart;
+import com.ecommerce.project.model.CartItem;
 import com.ecommerce.project.model.Category;
 import com.ecommerce.project.model.Product;
+import com.ecommerce.project.payload.CartDTO;
 import com.ecommerce.project.payload.ProductDTO;
 import com.ecommerce.project.payload.ProductResponse;
+import com.ecommerce.project.repository.CartRepository;
 import com.ecommerce.project.repository.CategoryRepository;
 import com.ecommerce.project.repository.ProductRepository;
 import org.modelmapper.ModelMapper;
@@ -30,6 +34,8 @@ public class ProductServiceImpl implements ProductService {
     @Autowired ModelMapper modelMapper;
     @Autowired ProductRepository productRepository;
     @Autowired FileService fileService;
+    @Autowired CartRepository cartRepository;
+
     @Value("${project.image}") private String path;
 
 
@@ -157,6 +163,16 @@ public class ProductServiceImpl implements ProductService {
             product.setSpecialPrice(specialPrice);
 
             Product updatedProduct = productRepository.save(product);
+
+            List<Cart> carts = cartRepository.findByProductId(productId);
+
+            List<CartDTO> cartDTOs = carts.stream()
+                    .map(cart -> cartToCartDTO(cart)
+                    )
+                    .toList();
+
+
+
             return modelMapper.map(updatedProduct, ProductDTO.class);
         }
         throw new ResourceNotFoundException("Product", "productId", productId);
@@ -184,6 +200,18 @@ public class ProductServiceImpl implements ProductService {
 
         return modelMapper.map(updatedProduct, ProductDTO.class) ;
 
+    }
+
+    CartDTO cartToCartDTO(Cart cart){
+        CartDTO cartDTO = modelMapper.map(cart,CartDTO.class);
+        List<CartItem> cartItems = cart.getCartItems();
+        List<ProductDTO> products = cartItems.stream().map(item -> {
+            ProductDTO productDTO = modelMapper.map(item.getProduct(), ProductDTO.class);
+            productDTO.setQuantity(item.getQuantity());
+            return productDTO;
+        }).toList();
+        cartDTO.setProducts(products);
+        return cartDTO;
     }
 
 }
