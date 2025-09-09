@@ -12,6 +12,7 @@ import com.ecommerce.project.payload.ProductResponse;
 import com.ecommerce.project.repository.CartRepository;
 import com.ecommerce.project.repository.CategoryRepository;
 import com.ecommerce.project.repository.ProductRepository;
+import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +36,7 @@ public class ProductServiceImpl implements ProductService {
     @Autowired ProductRepository productRepository;
     @Autowired FileService fileService;
     @Autowired CartRepository cartRepository;
+    @Autowired CartService cartService;
 
     @Value("${project.image}") private String path;
 
@@ -159,6 +161,8 @@ public class ProductServiceImpl implements ProductService {
             product.setPrice(productDTO.getPrice());
             product.setDiscount(productDTO.getDiscount());
             product.setImageUrl(productDTO.getImageUrl());
+            product.setQuantity(productDTO.getQuantity());
+
             double specialPrice = (1 - product.getDiscount() * 0.01) * product.getPrice();
             product.setSpecialPrice(specialPrice);
 
@@ -171,21 +175,31 @@ public class ProductServiceImpl implements ProductService {
                     )
                     .toList();
 
-
+            cartDTOs.forEach(cart -> cartService.updateProductInCarts(cart.getCartId(), productId));
 
             return modelMapper.map(updatedProduct, ProductDTO.class);
         }
         throw new ResourceNotFoundException("Product", "productId", productId);
     }
 
-    @Override
-    public ProductDTO deleteProduct(Long productId) {
+    @Transactional
+    Product helperDeleteProduct(Long productId){
         Optional<Product> product = productRepository.findById(productId);
         if(product.isEmpty()){
             throw new ResourceNotFoundException("Product", "productId", productId);
         }
+
+        List<Cart> carts = cartRepository.findByProductId(productId);
+        carts.forEach(cart -> cartService.deleteProductFromCart(cart.getCartId(), productId));
+        return product.get();
+    }
+
+    @Transactional
+    @Override
+    public ProductDTO deleteProduct(Long productId) {
+        Product product = helperDeleteProduct(productId);
         productRepository.deleteById(productId);
-        return modelMapper.map(product.get(), ProductDTO.class);
+        return modelMapper.map(product, ProductDTO.class);
     }
 
     @Override

@@ -130,11 +130,39 @@ public class CartServiceImpl implements CartService{
         CartItem cartItem = cartItemRepository.findCartItemByCartIdAndProductId(cartId, productId);
         if(cartItem==null) throw new ResourceNotFoundException("CartItem","productId",productId);
 
+        String productName = cartItem.getProduct().getProductName();
         cart.setTotalPrice(cart.getTotalPrice() - (cartItem.getProductPrice()*cartItem.getQuantity()));
 
+        cartRepository.save(cart);
         cartItemRepository.deleteCartItemByProductIdAndCartCartId(productId, cartId);
+        cart=null ;
 
-        return "Product with id "+cartItem.getProduct().getProductName()+" removed from cart successfully";
+        return "Product with id "+productName+" removed from cart successfully";
+    }
+
+    @Override
+    public void updateProductInCarts(Long cartId, Long productId) {
+        Cart cart = cartRepository.findById(cartId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cart", "cartId", cartId));
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+
+        CartItem cartItem = cartItemRepository.findCartItemByCartIdAndProductId(cartId, productId);
+
+        if (cartItem == null) {
+            throw new APIException("Product " + product.getProductName() + " not available in the cart!!!");
+        }
+
+        double cartPrice = cart.getTotalPrice()
+                - (cartItem.getProductPrice() * cartItem.getQuantity());
+
+        cartItem.setProductPrice(product.getSpecialPrice());
+
+        cart.setTotalPrice(cartPrice
+                + (cartItem.getProductPrice() * cartItem.getQuantity()));
+
+        cartItemRepository.save(cartItem);
     }
 
     CartDTO cartToCartDTO(Cart cart){
