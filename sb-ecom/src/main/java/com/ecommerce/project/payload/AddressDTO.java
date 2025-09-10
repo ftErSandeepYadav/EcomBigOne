@@ -1,26 +1,14 @@
-package com.ecommerce.project.model;
-
-import jakarta.persistence.*;
+package com.ecommerce.project.payload;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 
-import javax.xml.stream.XMLInputFactory;
-import java.util.ArrayList;
-import java.util.List;
-
-@Entity
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "addresses")
-public class Address {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+@NoArgsConstructor
+public class AddressDTO {
     private Long addressId ;
 
     @NotBlank
@@ -32,9 +20,5 @@ public class Address {
     @NotBlank
     @Size(min = 6, max = 6, message = "Zip code must be 6 characters long")
     private String pinCode ;
-
-    @ToString.Exclude
-    @ManyToOne
-    private User users ;
 
 }

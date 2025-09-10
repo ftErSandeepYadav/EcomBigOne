@@ -126,19 +126,27 @@ public class CartServiceImpl implements CartService{
     @Transactional
     @Override
     public String deleteProductFromCart(Long cartId, Long productId) {
-        Cart cart = cartRepository.findById(cartId).orElseThrow(()-> new ResourceNotFoundException("Cart","cartId",cartId));
+        Cart cart = cartRepository.findById(cartId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cart", "cartId", cartId));
         CartItem cartItem = cartItemRepository.findCartItemByCartIdAndProductId(cartId, productId);
-        if(cartItem==null) throw new ResourceNotFoundException("CartItem","productId",productId);
+        if (cartItem == null) throw new ResourceNotFoundException("CartItem", "productId", productId);
 
         String productName = cartItem.getProduct().getProductName();
-        cart.setTotalPrice(cart.getTotalPrice() - (cartItem.getProductPrice()*cartItem.getQuantity()));
+        cart.setTotalPrice(cart.getTotalPrice() - (cartItem.getProductPrice() * cartItem.getQuantity()));
 
+        // remove by id to avoid equals/proxy issues and keep both sides consistent
+        Long removeId = cartItem.getCartItemId();
+        cart.getCartItems().removeIf(ci -> ci.getCartItemId().equals(removeId));
+
+        // break association (keeps JPA state consistent)
+        cartItem.setCart(null);
+
+        // rely on orphanRemoval = true; saving the cart will remove the orphaned child
         cartRepository.save(cart);
-        cartItemRepository.deleteCartItemByProductIdAndCartCartId(productId, cartId);
-        cart=null ;
 
-        return "Product with id "+productName+" removed from cart successfully";
+        return "Product with id " + productName + " removed from cart successfully";
     }
+
 
     @Override
     public void updateProductInCarts(Long cartId, Long productId) {
